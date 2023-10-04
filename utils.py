@@ -130,7 +130,7 @@ if __name__ == "__main__":
     
     #! Note Python gets killed when batchsize = 16, potential reason is RAM running out.
     #! For now batchsize = 8 is used which works fine for - Dataloading
-    trainloader = DataLoader(train_split, batch_size=8)
+    trainloader = DataLoader(train_split, batch_size=15)
 
     for img, lab in trainloader:
         print(img.shape, lab.shape)
