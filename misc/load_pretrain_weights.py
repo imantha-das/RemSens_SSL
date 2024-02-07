@@ -44,7 +44,7 @@ host_name = socket.gethostname()
 if host_name == "cora":
     img_dir = "/home/imantha/data/Million-AID/train/agriculture_land/arable_land/dry_field"
 else:
-    img_dir = "data/MillionAID_partial/train/agriculture_land/arable_land/dry_field"
+    img_dir = "/home/imantha/data/MillionAID_partial/train/agriculture_land/arable_land/dry_field"
 
 img = Image.open(os.path.join(img_dir, "P0335343.jpg"))
 plt.imshow(img)
