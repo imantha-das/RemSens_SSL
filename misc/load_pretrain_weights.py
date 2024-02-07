@@ -30,22 +30,18 @@ res50 = resnet50()
 # Print layers and weights of the model
 #print(summary(res50))
 
-#print(os.listdir("pretrained/aid28"))
-pretrained_weights_path = "pretrain_weights/aid28/rsp-resnet-50-ckpt.pth"
-res50.load_state_dict(torch.load(pretrained_weights_path), strict=False)
-
-# Get SSH hostname
-host_name = socket.gethostname()
+# Load Model weights
+pretrained_weights = "pretrain_weights/aid28/rsp-resnet-50-ckpt.pth"
+res50.load_state_dict(torch.load(pretrained_weights), strict=False)
   
-
 # ==============================================================================
 # Plot image 
 # ==============================================================================
 img_dir = "data/Million-AID/train/agriculture_land/arable_land/dry_field"
-
-img = Image.open(os.path.join(img_dir, "P0335343.jpg"))
+img_name = "P0335343.jpg"
+img = Image.open(os.path.join(img_dir, img_name))
 plt.imshow(img)
-#plt.show() #to display image
+#plt.show() #to display image, doesnot work when SSH to cora, something wrong with image display
 
 # ==============================================================================
 # Convert image to tensor
@@ -91,7 +87,7 @@ labs = {
     47 : "beach", 48 : "lake", 49 : "river", 50 : "dam"
 }
 
-print(out)
+#print(out)
 #print(torch.argmax(out), labs[torch.argmax(out.item())])
 
-print(labs[torch.argmax(out).item()])
+#print(labs[torch.argmax(out).item()])
