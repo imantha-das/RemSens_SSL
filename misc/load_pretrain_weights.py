@@ -17,7 +17,7 @@ from PIL import Image
 import matplotlib.pyplot as plt
 
 # Path to RSP Scene Recognition - Pretrained Models saved here
-sys.path.append("/home/imantha/workspace/RemSens_SSL/RSP/Scene Recognition")
+sys.path.append("RSP/Scene Recognition")
 
 import os
 from models import build_model
@@ -41,10 +41,7 @@ host_name = socket.gethostname()
 # ==============================================================================
 # Plot image 
 # ==============================================================================
-if host_name == "cora":
-    img_dir = "/home/imantha/data/Million-AID/train/agriculture_land/arable_land/dry_field"
-else:
-    img_dir = "/home/imantha/data/MillionAID_partial/train/agriculture_land/arable_land/dry_field"
+img_dir = "data/Million-AID/train/agriculture_land/arable_land/dry_field"
 
 img = Image.open(os.path.join(img_dir, "P0335343.jpg"))
 plt.imshow(img)
@@ -67,7 +64,7 @@ img_t = img_t.unsqueeze(dim = 0).float() # Add batch dim
 
 out = res50(img_t)
 print(colored(f"output shape : {out.shape}", "magenta"))
-#print(out)
+print(colored(f"Model Weights : {out}", "green"))
 
 labs = {
     #Agriculture land
