@@ -6,6 +6,7 @@
 
 import sys 
 import os
+import collections
 from termcolor import colored
 
 import torch
@@ -26,20 +27,27 @@ from models.resnet import resnet50, ResNet
 # Check if cuda is available
 #print(colored(torch.cuda.is_available(), "green"))
 
-res50 = resnet50()
-# Print layers and weights of the model
-#print(summary(res50))
+res50 = resnet50(num_classes = 30)
 
-# Load Model weights
-pretrained_weights = "pretrain_weights/aid28/rsp-resnet-50-ckpt.pth"
-res50.load_state_dict(torch.load(pretrained_weights), strict=False)
+
+# # Print layers and weights of the model
+# # print(summary(res50))
+
+# # Load Model weights
+MODEL_WEIGHT_PATH = "pretrain_weights/aid28-rsp-resnet-50-ckpt.pth"
+res50_state = torch.load(MODEL_WEIGHT_PATH) 
+res50.load_state_dict(res50_state["model"])
+
+# Print model parameters
+# for param in res50.parameters():
+#     print(param.data)
   
 # ==============================================================================
 # Plot image 
 # ==============================================================================
-img_dir = "data/Million-AID/train/agriculture_land/arable_land/dry_field"
+IMG_DIR = "data/Million-AID/train/agriculture_land/arable_land/dry_field"
 img_name = "P0335343.jpg"
-img = Image.open(os.path.join(img_dir, img_name))
+img = Image.open(os.path.join(IMG_DIR, img_name))
 plt.imshow(img)
 #plt.show() #to display image, doesnot work when SSH to cora, something wrong with image display
 
@@ -59,8 +67,7 @@ img_t = img_t.unsqueeze(dim = 0).float() # Add batch dim
 # ==============================================================================
 
 out = res50(img_t)
-print(colored(f"output shape : {out.shape}", "magenta"))
-print(colored(f"Model Weights : {out}", "green"))
+#print(colored(f"output shape : {out.shape}", "magenta"))
 
 labs = {
     #Agriculture land
@@ -87,7 +94,7 @@ labs = {
     47 : "beach", 48 : "lake", 49 : "river", 50 : "dam"
 }
 
-#print(out)
-#print(torch.argmax(out), labs[torch.argmax(out.item())])
+print(out)
+class_idx = torch.argmax(out).item()
+print(labs[class_idx])
 
-#print(labs[torch.argmax(out).item()])
