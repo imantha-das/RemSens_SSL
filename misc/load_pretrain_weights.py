@@ -98,3 +98,8 @@ print(out)
 class_idx = torch.argmax(out).item()
 print(labs[class_idx])
 
+#print(summary(res50))
+
+#print(torch.nn.Sequential(*list(res50.children())[-1]))
+
+print(res50)
