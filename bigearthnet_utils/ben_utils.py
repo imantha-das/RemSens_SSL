@@ -4,152 +4,118 @@
 import os
 import json
 from typing import List, Tuple
+import ast
 from termcolor import colored
+
+import pandas as pd
 
 from PIL import Image
 import pickle
 
 import torch
-from torch.utils.data import Dataset
-from torchvision.transforms import ToTensor
+from torch.utils.data import Dataset, DataLoader
+from torchvision.transforms import ToTensor, Compose, Normalize
 
 from sklearn.preprocessing import LabelEncoder, MultiLabelBinarizer
 
-
-def get_encodings(image_labels:List[str] | List[List[str]],unique_labels:List[str],label_encodings:bool = True):
-    """
-    Desc : Get label encordings for each image in the form of torch tensors
-    Inputs
-        - image_labels : label for each image
-        - unique_labels : all unique labels available in BigEarthNet (There is 43 ...)
-        - label_encordings : if true returns label encordings else multilabel format
-            - when the encorder is a LabelEncoderpass a list for image_labels
-            - when the encoder is a MultiLabelBinarizer pass list of lists
-    Outputs
-        - encordings : encordings for labels
-        - encorder : scikit learn trained enorder
-    """
-    if label_encodings: 
-        encoder = LabelEncoder()
-        encoder.fit(unique_labels)
-        encodings = encoder.transform(image_labels)
-    else:
-        encoder = MultiLabelBinarizer(classes = unique_labels)
-        encodings = encoder.fit_transform(image_labels)
-
-    return encodings, encoder
+torch.manual_seed(0)
 
 class BigEarthNet(Dataset):
-    """Dataset class to load Multi Label dataset BigEarthNet"""
-    def __init__(self, paths:List[str], unique_labels:list, encodings : str)->Tuple[torch.tensor,List[int], List[str]]:
+    def __init__(self, paths_and_labs:pd.DataFrame, transform = None)->Tuple[torch.Tensor, torch.Tensor]:
         """
-        Inputs 
-            - paths : a list of paths to every image in respective folder
-            #* This will be likely the "train" folder for example
-            - unique_labels : A list of labels of the entire dataset. There are 43 labels in BigEarthNet
-            - encodings : option between "ordinal" or "ohe
-                - when the encorder is a LabelEncoder pass a list for image_labels
-                - when the encoder is a MultiLabelBinarizer pass list of lists
+        Class to construct a dataset from BigEarthNet
+        Inputs
+            paths_and_labs : Pandas Dataframe containing paths to each of the RGB channels and encoded labels
         Outputs
-            - rgbt : tensor of shape (3,120,120) containg RGB values
-            - encode_label : list of labels either encoded using LabelEncoder or MultiLabelBinarizer
-            - 
+            rgb_t : Torch tensor containing RGB value for an image
+            enc : corresponding encodings for image
         """
-        self.paths = paths
-        self.unique_labels = unique_labels
-        self.encodings = encodings
+        self.df = paths_and_labs
+        self.transform = transform
+
+        # Check if all columns are inside dataframe
+        assert all(col_name in paths_and_labs.columns.values for col_name in["red_band_path", "green_band_path", "blue_band_path", "enc_labels"]), "column not inside dataframe"
 
     def __len__(self):
-        return len(self.paths)
+        return len(self.df)
 
     def __getitem__(self, idx):
-        # Path to main folder containing all tif files
-        image_path = self.paths[idx]
+        # Pandas Series with path information to each band and label encordings
+        image_data = self.df.iloc[idx]
+        #print(f"loading {image_data['data_folder_path']} at index {idx}")
 
-        # Search for bands B04,B03, B02 which contain PIL images to red,green,blue channels
-        red_band_path = os.path.join(image_path, [f for f in os.listdir(image_path) if f.endswith("B04.tif")][0])
-        green_band_path = os.path.join(image_path, [f for f in os.listdir(image_path) if f.endswith("B03.tif")][0])
-        blue_band_path = os.path.join(image_path, [f for f in os.listdir(image_path) if f.endswith("B02.tif")][0])
-        
         # Read PIL Image
-        #print(colored(red_band_path, "blue"))
-        red_band = Image.open(red_band_path)
-        green_band = Image.open(green_band_path)
-        blue_band = Image.open(blue_band_path)
+        r = Image.open(image_data["red_band_path"])
+        g = Image.open(image_data["green_band_path"])
+        b = Image.open(image_data["blue_band_path"])
 
-        # Convert Images to tensors
-        rt = ToTensor()(red_band).float() #shape : (1,120,120)
-        gt = ToTensor()(green_band).float() #shape (1,120,120)
-        bt = ToTensor()(blue_band).float()#shape (1,120,120)
-        
-        # Concatenate tensors to make RGB image tensor
-        rgbt = torch.cat([rt, gt, bt], dim = 0) #(3,120,120)
+        # Convert PIL to Torch Tensors
+        r_t = ToTensor()(r).float()
+        g_t = ToTensor()(b).float()
+        b_t = ToTensor()(b).float()
 
-        # get_labels for the image
-        json_file_path = os.path.join(image_path,[f for f in os.listdir(image_path) if f.endswith(".json")][0])
-        with open(json_file_path) as f:
-            metadata = json.load(f)
+        # Concatenate tensor to make one RGB tensor
+        rgb_t = torch.cat([r_t, g_t, b_t], dim = 0) #(3,120,120)
 
-        # Get labels from metadata, this is MultiLabel Classification dataset hence the label(s)
-        # But these are the labels associated with a single image
-        raw_labels = metadata["labels"]
-        
-        if self.encodings == "ordinal":
-            encodings, encoder = get_encodings(raw_labels, self.unique_labels, label_encodings = True)
+        # Get encodings from dataframe
+        enc = image_data["enc_labels"]
+        enc = torch.Tensor(ast.literal_eval(enc))
+
+        if self.transform:
+            return self.transform(rgb_t), enc
         else:
-            encodings, encoder = get_encodings([raw_labels], self.unique_labels, label_encodings = False)
+            return rgb_t, enc
 
-        misc = {
-            "raw_labels" : raw_labels,
-            "encoder" : encoder
-        }
-        
-        #print(colored(rgbt.shape, "blue"), colored(encodings.shape, "magenta"))
-        if self.encodings == "ohe":
-            assert (rgbt.shape == (3,120,120)) or (encodings.shape == (1,43))
-
-        
-
-        return rgbt, encodings
 
 if __name__ == "__main__":
     
-    with open("bigearthnet_utils/bigearthnet_unique_labels.json") as f:
-        unique_labels = json.load(f)["labels"]
 
-    # Test get_encodings
-    img1_labs = ["Transitional woodland/shrub"]
-    img2_labs = ["Salt marshes", "Sclerophyllous vegetation", "Transitional woodland/shrub"]
+    # Get dataframe containing paths to RGB Images and encoded labels
+    df_paths_labs = pd.read_csv("bigearthnet_utils/ben_datapaths_and_labels_v4.csv")
+    df_paths_labs.drop("Unnamed: 0", axis = 1, errors = "ignore", inplace = True)
 
-    # encodings, encorder = get_encodings([img2_labs], unique_labels, label_encodings = False)
-    # print(encodings)
+    # Load BigEarthNet Dataset    
+    ben = BigEarthNet(df_paths_labs)
 
-    # label_encoder = LabelEncoder()
-    # label_encoder.fit(unique_labels)
-    # pickle.dump(label_encoder, open("bigearthnet_utils/label_encoder.pkl", "wb"))
-    # print(label_encoder.transform(["Transitional woodland/shrub"]))
+    # Compute train, valid and test size
+    train_size = int(0.2 * len(ben))
+    test_size = len(ben) - train_size
+    print(f"Train size : {train_size}, Test size : {test_size}")
+    ben_train, ben_test = torch.utils.data.random_split(ben, [train_size, test_size])
 
-    # label_encoder = pickle.load(open("bigearthnet_utils/label_encoder.pkl", "rb"))
-    # print(label_encoder.transform(img2_labs))
+    # To get a Image and its label you can use .__getitem__(idx) method
+    train_img, train_lab = ben_train.__getitem__(1)
+    test_img, test_lab = ben_test.__getitem__(1)
 
-    # mlb_encoder = MultiLabelBinarizer()
-    # mlb_encoder.fit(unique_labels)
-    # pickle.dump(mlb_encoder, open("bigearthnet_utils/mlb_encoder.pkl", "wb"))
-    # print("intial encodeing ...")
-    # print(mlb_encoder.transform([img1_labs]))
-
-    # new_mlb_encoder = pickle.load(open("bigearthnet_utils/mlb_encoder.pkl", "rb"))
-    # print("loaded encodeing ...")
-    # print(new_mlb_encoder.transform([img2_labs]))
-
-    # parent_dir = "data/BigEarthNet-v1.0/train"
-    # image_paths = [os.path.join(parent_dir, f) for f in os.listdir(parent_dir)]
+    # Find the mean and std of each of the color channels for the entire train set
+    loader = DataLoader(ben_train, batch_size = len(ben_train))
+    data = next(iter(loader))
     
-    # big_earth_net = BigEarthNet(image_paths, unique_labels, encodings = "ohe")
-    # img2, label, misc = big_earth_net.__getitem__(2)
-    # print(img2.shape, label)
+    mean = data[0].mean(dim = (0,2,3))
+    std = data[0].std(dim = (0,2,3))
+    print(f"Mean : {mean}, Std : {std}")
 
-    # # Check if encoded labs are infact true to the raw labels
-    # print(f"raw_labels : {misc['raw_labels']}")
-    # print(f"invers transform :{misc['encoder'].inverse_transform(label)}")
+    # Now that the mean and std are available load Dataset and Normalize it.
+    ben_norm = BigEarthNet(df_paths_labs, transform = Compose([Normalize(mean = mean, std = std)]))
+    ben_train_norm, ben_test_norm = torch.utils.data.random_split(ben_norm,[train_size, test_size])
 
+    # Test some images from training set to see if they have normalized
+    train_img_norm, train_lab_norm = ben_train_norm.__getitem__(1)
+    print(f"Max : {train_img_norm.max()}, Min :  {train_img_norm.min()}")
+
+    train_img_norm, train_lab_norm = ben_train_norm.__getitem__(2)
+    print(f"Max : {train_img_norm.max()}, Min :  {train_img_norm.min()}")
+
+    train_img_norm, train_lab_norm = ben_train_norm.__getitem__(3)
+    print(f"Max : {train_img_norm.max()}, Min :  {train_img_norm.min()}")
+
+    # Normalization doesnt get values between -1 and 1, but are reduced to max value 4ish
+    # Check with the unnormalized dataset to see any changes
+    train_img, train_lab = ben_train.__getitem__(1)
+    print(f"Max : {train_img.max()}, Min :  {train_img.min()}")
+
+    train_img, train_lab = ben_train.__getitem__(2)
+    print(f"Max : {train_img.max()}, Min :  {train_img.min()}")
+
+    train_img, train_lab = ben_train.__getitem__(3)
+    print(f"Max : {train_img.max()}, Min :  {train_img.min()}")

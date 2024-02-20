@@ -76,31 +76,31 @@ if __name__ == "__main__":
 
     # Loop through every folder in BigEarthNet and save, paths to color channels, paths to root data folder and class labels 
     dataset_path = "data/BigEarthNet-v1.0"
-    # df = construct_dataframe(dataset_path)
-    # df.to_csv("bigearthnet_utils/ben_datapaths_and_labels_v1.csv", index = True)
+    df = construct_dataframe(dataset_path)
+    df.to_csv("bigearthnet_utils/ben_datapaths_and_labels_v3.csv", index = False)
 
     # # Load the saved csv file containing file paths to RGB Channels, folder and string labels
     # #! File moved to archive as its not useful anymore - A more updated file ben_datapaths_and_labs_v2.csv containing the encodings is available
-    # df = pd.read_csv("bigearthnet_utils/ben_datapaths_and_labels_v1.csv")
+    df = pd.read_csv("bigearthnet_utils/ben_datapaths_and_labels_v3.csv")
 
-    # # Add label encodings to dataframe
-    # df, mlb = convert_labels_to_encodings(df)
+    # Add label encodings to dataframe
+    df, mlb = convert_labels_to_encodings(df)
 
-    # # Save dataframe and multilabel binarizer for further use
-    # df.to_csv("bigearthnet_utils/ben_datapaths_and_labels_v2.csv")
-    # with open("bigearthnet_utils/ben_mlb_encoder_labels.pkl", "wb") as f:
-    #     pickle.dump(mlb, f)
+    # Save dataframe and multilabel binarizer for further use
+    df.to_csv("bigearthnet_utils/ben_datapaths_and_labels_v4.csv")
+    with open("bigearthnet_utils/ben_mlb_encoder_labels_v4.pkl", "wb") as f:
+        pickle.dump(mlb, f)
 
     # Load the saved csv file containing file paths to RGB Channels, folder, string labels and encoded labels
-    df = pd.read_csv("bigearthnet_utils/ben_datapaths_and_labels_v2.csv")
+    # df = pd.read_csv("bigearthnet_utils/ben_datapaths_and_labels_v2.csv")
 
     # Test trained multilabel bianrizer
-    with open("bigearthnet_utils/ben_mlb_encoder_labels.pkl", "rb") as f:
-        mlb = pickle.load(f)
+    # with open("bigearthnet_utils/ben_mlb_encoder_labels.pkl", "rb") as f:
+    #     mlb = pickle.load(f)
 
-    enc_labs = np.array(list(map(lambda x: ast.literal_eval(x), df["enc_labels"])))
-    str_labs = mlb.inverse_transform(enc_labs)
+    # enc_labs = np.array(list(map(lambda x: ast.literal_eval(x), df["enc_labels"])))
+    # str_labs = mlb.inverse_transform(enc_labs)
 
-    print(df.head())
-    print(str_labs[:5])
+    # print(df.head())
+    # print(str_labs[:5])
 
