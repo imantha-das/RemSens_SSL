@@ -1,4 +1,5 @@
 data/*
 archive/*
 pretrain_weights/*
+bigearthnet_utils/ben_datapaths_and_labels_v4.csv
 
