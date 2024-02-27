@@ -2,8 +2,6 @@
 # Desc : Organises RSMosiac data (Malaysia - MY) in to folders                    
 # Folder structure : root (RSMosiacs-MY) > Image Name > Each tif file belonging to image
 # ---------------------------------------------------------------------------- #
-
-
 import os 
 import re
 import numpy as np
@@ -12,6 +10,7 @@ import shutil
 from glob import glob 
 from zipfile import ZipFile
 from termcolor import colored
+import skimage as ski
 
 path_to_zip = "data/archive/mosiacs.zip"
 
@@ -89,20 +88,59 @@ def get_num_imgs(parent_dir):
         folder_img_cnts[folder] = tif_cnt
 
     return folder_img_cnts
+
+def split_dataset_based_on_channels(root_dir):
+    """There are mixture of images with 3 and 4 channels, group them into different datasets"""
+    parent_dir = os.path.dirname(root_dir)
+    if not os.path.exists(os.path.join(parent_dir, "channel3")):
+        os.mkdir(os.path.join(parent_dir, "channel3"))
+    if not os.path.exists(os.path.join(parent_dir, "channel4")):
+        os.mkdir(os.path.join(parent_dir, "channel4"))
+
+    image_folders = glob(os.path.join(root_dir,"*"))
+    to_ch3 = os.path.join(parent_dir, "channel3")
+    to_ch4 = os.path.join(parent_dir, "channel4")
+
+    for folder in image_folders:
+        tif_count = 0
+        for file in glob(os.path.join(folder, "*")):
+            if file.endswith(".tif"):
+                tif_count += 1
+                img = ski.io.imread(file)
+                if img.ndim == 3:
+                    w,h,c = img.shape
+                else:
+                    c = None    
+
+                if c == 3:
+                    shutil.move(src = folder, dst = to_ch3)
+                elif c== 4:
+                    shutil.move(src = folder, dst = to_ch4)
+                else:
+                    print(f"{file} has more or less than 3 or 4 channels")
+        
+        assert tif_count == 1, "There is more or less than one tif image"
+        
     
 if __name__ ==  "__main__":
 
-    #create_dataset(path_to_zip, "RSMosiacs-MY")
-    folder_img_cnts = get_num_imgs("data/archive/RSMosiacs-MY/images")
+    # #create_dataset(path_to_zip, "RSMosiacs-MY")
+    # folder_img_cnts = get_num_imgs("data/archive/RSMosiacs-MY/images")
 
-    # for k,v in folder_img_cnts.items():
-    #     print(k , v)
+    # # for k,v in folder_img_cnts.items():
+    # #     print(k , v)
 
-    img_cnts_df = pd.DataFrame(folder_img_cnts, columns = ["folder_name", "tiff_cnt"])
-    img_cnts_df["folder_name"] = folder_img_cnts.keys()
-    img_cnts_df["tiff_cnt"] = folder_img_cnts.values()
+    # img_cnts_df = pd.DataFrame(folder_img_cnts, columns = ["folder_name", "tiff_cnt"])
+    # img_cnts_df["folder_name"] = folder_img_cnts.keys()
+    # img_cnts_df["tiff_cnt"] = folder_img_cnts.values()
 
-    print(img_cnts_df[img_cnts_df.tiff_cnt > 1])
+    # print(img_cnts_df[img_cnts_df.tiff_cnt > 1])
 
     #! There are a couple folders in images that has more than 1 tif file, locate them and ...
     #! ... clean them manually.
+
+    # Code to split dataset depending on the number of channels
+    root_dir = "data/SSHSPH-RSMosaics-MY-v2.1/images"
+    image_folders = glob(os.path.join(root_dir,"*"))
+
+    split_dataset_based_on_channels(root_dir)
