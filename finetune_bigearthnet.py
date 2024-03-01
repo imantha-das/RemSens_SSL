@@ -14,7 +14,7 @@ import pytorch_lightning as pl
 from bigearthnet_utils.ben_utils import BigEarthNet 
 
 # Load path to RSP Scene Recognition repository in order to load pretrained model
-sys.path.append("/home/imantha/workspace/RemSens_SSL/RSP/Scene Recognition")
+sys.path.append("/home/imantha/workspace/RemSens_SSL/RSP/Scene Recognition") 
 
 #from models import build_model
 from models.resnet import resnet50
