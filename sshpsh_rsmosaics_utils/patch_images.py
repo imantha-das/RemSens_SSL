@@ -11,9 +11,6 @@ import skimage as ski
 import matplotlib.pyplot as plt
 from patchify import patchify
 
-#To avoid Image.DecompressionBombError
-Image.MAX_IMAGE_PIXELS = 1000000000
-
 def patch_image(path_to_img:str, patch_size = 512,resize = None):
     img = Image.open(path_to_img)
     W,H = img.size
@@ -25,11 +22,6 @@ def patch_image(path_to_img:str, patch_size = 512,resize = None):
         print(f"Resizing image of shape : {np.asarray(img).shape} -> {resimg_arr.shape}")
         # patches.shape = (15, 15, 1, 512, 512, 3)
         patches = patchify(resimg_arr, patch_size = (patch_size, patch_size, c), step = patch_size)
-    else:
-        img_arr = np.asarray(img)
-        assert img_arr.ndim == 3
-        w,h,c = img_arr.shape
-        patches = patchify(img_arr, patch_size = (patch_size, patch_size, c), step = patch_size)
     
     patch_list  = []
     for p_row in range(patches.shape[0]):
@@ -63,10 +55,12 @@ def convert_and_save(arr, f_prefix, idx):
 if __name__ == "__main__":
 
     # Folder where the images are stored
-    root = "data/SSHSPH-RSMosaics-MY-v2.1/images/channel3"
+    root = "data/SSHSPH-RSMosaics-MY-v2.1/images/test_ch3"
+    PATCH_SIZE = 256
+    RESIZE = None
     # Parent folder of the folder contianing the images - where you will store the patchse
     parent_folder = path.dirname(root)
-    save_folder = path.join(parent_folder, "channel3_p")
+    save_folder = path.join(parent_folder, "channel3_p256x256")
     # Creare a folder to store the patches
     if not path.exists(save_folder):
         os.mkdir(save_folder)
@@ -77,7 +71,7 @@ if __name__ == "__main__":
         for file in glob(path.join(folder, "*")):
             if file.endswith(".tif"):
                 # Get the patches list and orginal image (if you want to have a look)
-                patch_list, img = patch_image(file, resize = (8000,8000))
+                patch_list, img = patch_image(file, patch_size = PATCH_SIZE, resize = RESIZE)
                 # Save patches in the designated folder
                 f_prefix = path.basename(path.dirname(file)) # get the foldername, i.w 20140429_03
                 f_prefix = path.join(save_folder, f_prefix) # add path to begining, "data/SSHSPH.../test_ch3_p/20140429_03"
