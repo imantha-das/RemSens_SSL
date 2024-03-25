@@ -22,6 +22,7 @@ from lightly.transforms import SimCLRTransform
 from lightly.models.modules.heads import SimCLRProjectionHead
 from lightly.loss import NTXentLoss
 import lightly.transforms.utils as lightly_utils
+import argparse
 
 import simclr_config as config
 
@@ -33,6 +34,10 @@ from models.resnet import resnet50
 NUM_WORKERS = multiprocessing.cpu_count()
 SEED = 1
 pl.seed_everything(SEED)
+
+parser = argparse.ArgumentParser()
+parser.add_argument("-dfold", "--data_folder", type = str)
+args = parser.parse_args()
 
 class SimCLR(pl.LightningModule):
     """Desc : Implementation of simCLR algorithm using LightlySSL"""
@@ -90,7 +95,8 @@ class SimCLR(pl.LightningModule):
 
 if __name__ == "__main__":
     # Path to folder containg images (.tif)
-    path_to_data = "data/SSHSPH-RSMosaics-MY-v2.1/images/channel3_p"
+    data_root = "data/SSHSPH-RSMosaics-MY-v2.1/images"
+    path_to_data = os.path.join(data_root, args.data_folder)
     # Transforms that will be applied to training set
     simclr_transform = SimCLRTransform(
         input_size = config.INPUT_SIZE,
@@ -104,13 +110,13 @@ if __name__ == "__main__":
         batch_size = config.BATCH_SIZE, #todo we need bigger batches
         shuffle = True, 
         drop_last = True,
-        num_workers = NUM_WORKERS
+        num_workers = NUM_WORKERS #Removing parallel workloads
     )
 
     simclr = SimCLR()
     # Train Model
     trainer = pl.Trainer(
-        default_root_dir = f"saved_weights/simclr-bs{config.BATCH_SIZE}-ep{config.MAX_EPOCHS}",
+        default_root_dir = f"saved_weights/simclr-is{config.INPUT_SIZE}-bs{config.BATCH_SIZE}-ep{config.MAX_EPOCHS}",
         devices = 1,
         accelerator = "gpu",
         max_epochs = config.MAX_EPOCHS
