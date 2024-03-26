@@ -24,7 +24,7 @@ from lightly.loss import NTXentLoss
 import lightly.transforms.utils as lightly_utils
 import argparse
 
-import simclr_config as config
+import config
 
 from utils import load_rsp_weights
 
